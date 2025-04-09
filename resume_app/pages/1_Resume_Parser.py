@@ -1,79 +1,79 @@
 import streamlit as st
 import json
-import PyPDF2
 from google import genai
-from google.genai import types
-from google.generativeai import GenerativeModel
-import os
+import PyPDF2
 
-# --- Gemini Setup ---
-os.environ["GOOGLE_API_KEY"] = "AIzaSyAiRiy9CNUgu7CrorrSALFoi3016_MvmGM"
+API_KEY = "AIzaSyAiRiy9CNUgu7CrorrSALFoi3016_MvmGM"
+client = genai.Client(api_key= API_KEY)
 
-# Initialize the model
-model = GenerativeModel(model_name="gemini-2.0-flash")
+def extract_text_from_pdf(uploaded_file):
+    """
+    Extracts text from each page of the uploaded PDF file.
+    """
+    pdf_reader = PyPDF2.PdfReader(uploaded_file)
+    text = ""
+    for page in pdf_reader.pages:
+        page_text = page.extract_text()
+        if page_text:  # Check if text extraction is successful
+            text += page_text + "\n"
+    return text
 
-def ats_extractor(resume_text):
-    prompt = f'''
-    Extract the following information from the resume below:
-    1. Full Name
-    2. Email ID
-    3. LinkedIn ID
-    4. Employment Details
-    5. Technical Skills
-    6. Soft Skills
+def extract_resume_data(resume_text):
+    prompt = f"""
+    Extract detailed information from the following resume:
+    - Full Name
+    - Email ID
+    - LinkedIn Profile
+    - List of Skills
+    - Employment History
 
     Resume:
     \"\"\"{resume_text}\"\"\"
+    """
+    
+    response = client.models.generate_content(
+        model='gemini-2.0-flash',
+        contents=prompt,
+        config={
+            'response_mime_type': 'application/json',
+        },
+    )
 
-    Provide the extracted information in JSON format only.
-    '''
+    print("DEBUG - Response Object:", response)
+    print("DEBUG - Response Object Attributes:", dir(response))
+
     try:
-        response = model.generate_content(
-            prompt,
-            generation_config={
-                "temperature": 0.7,
-                "max_output_tokens": 2048
-            }
-        )
-        return response.text or response.parts[0].text
-    except Exception as e:
-        return f"Error from Gemini: {str(e)}"
+        # Parsing the JSON response if the response is a JSON string
+        response_data = json.loads(response.result)  # Adjust based on actual attribute
+        return response_data
+    except AttributeError:
+        print("Error: The expected attribute does not exist in the response object.")
+        return None
+    except json.JSONDecodeError:
+        print("Error: Failed to decode JSON from response.")
+        return None
 
-def extract_text_from_file(uploaded_file):
-    if uploaded_file.name.endswith(".pdf"):
-        reader = PyPDF2.PdfReader(uploaded_file)
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text()
-        return text
-    else:
-        return uploaded_file.read().decode("utf-8")
+# Streamlit UI
+st.set_page_config(page_title="Resume Parser", layout="wide")
+st.title("Resume Parser Using Gemini")
 
-st.set_page_config(page_title="Resume Parser", layout="centered")
-st.title("📄 Resume Parser")
-
-uploaded_file = st.file_uploader("Upload your resume (.pdf or .txt)", type=["pdf", "txt"])
+uploaded_file = st.file_uploader("Upload your resume (.txt, .pdf)", type=["txt", "pdf"])
 
 if uploaded_file:
-    resume_text = extract_text_from_file(uploaded_file)
+    if uploaded_file.name.endswith(".pdf"):
+        # If a PDF is uploaded, extract text from it
+        resume_text = extract_text_from_pdf(uploaded_file)
+    else:
+        # Assume it's a text file and read it directly
+        resume_text = uploaded_file.getvalue().decode("utf-8")
 
-    with st.spinner("Parsing your resume with Gemini..."):
-        result = ats_extractor(resume_text)
-
-        if not result:
-            st.error("❌ No response received from Gemini.")
-        else:
-            try:
-                parsed = json.loads(result)
-                st.success("✅ Successfully Parsed!")
-                st.subheader("Extracted Resume Data")
-                st.json(parsed)
-                st.download_button(
-                    "📥 Download JSON",
-                    data=json.dumps(parsed, indent=2),
-                    file_name="parsed_resume.json",
-                    mime="application/json"
-                )
-            except json.JSONDecodeError:
-                st.error("❌ Gemini response is not valid JSON.")
-                st.text(result)
+    if resume_text:
+        with st.spinner("Parsing your resume..."):
+            extracted_data = extract_resume_data(resume_text)  # Ensure this function is defined
+            if extracted_data:
+                st.success("Resume parsed successfully!")
+                st.json(extracted_data)
+            else:
+                st.error("Failed to parse the resume.")
+else:
+    st.info("Please upload a resume in PDF or text format.")
