@@ -14,7 +14,7 @@ def extract_text_from_pdf(uploaded_file):
     text = ""
     for page in pdf_reader.pages:
         page_text = page.extract_text()
-        if page_text:  # Check if text extraction is successful
+        if page_text:  
             text += page_text + "\n"
     return text
 
@@ -43,8 +43,7 @@ def extract_resume_data(resume_text):
     print("DEBUG - Response Object Attributes:", dir(response))
 
     try:
-        # Parsing the JSON response if the response is a JSON string
-        response_data = json.loads(response.result)  # Adjust based on actual attribute
+        response_data = json.loads(response.result)  
         return response_data
     except AttributeError:
         print("Error: The expected attribute does not exist in the response object.")
@@ -61,15 +60,13 @@ uploaded_file = st.file_uploader("Upload your resume (.txt, .pdf)", type=["txt",
 
 if uploaded_file:
     if uploaded_file.name.endswith(".pdf"):
-        # If a PDF is uploaded, extract text from it
         resume_text = extract_text_from_pdf(uploaded_file)
     else:
-        # Assume it's a text file and read it directly
         resume_text = uploaded_file.getvalue().decode("utf-8")
 
     if resume_text:
         with st.spinner("Parsing your resume..."):
-            extracted_data = extract_resume_data(resume_text)  # Ensure this function is defined
+            extracted_data = extract_resume_data(resume_text)  
             if extracted_data:
                 st.success("Resume parsed successfully!")
                 st.json(extracted_data)
