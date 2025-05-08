@@ -14,16 +14,11 @@ import hashlib
 from datetime import datetime
 
 def get_api_key():
-    """Get API key from secrets or environment variables"""
-    # In production, use Streamlit secrets
     if 'GEMINI_API_KEY' in st.secrets:
         return st.secrets["GEMINI_API_KEY"]
-    # For local development or if set in environment
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        # Fallback to hardcoded key (not recommended for production)
         api_key = "AIzaSyAiRiy9CNUgu7CrorrSALFoi3016_MvmGM"
-        st.warning("⚠️ Using default API key. For production, set the API key in environment variables or Streamlit secrets.")
     return api_key
 
 # Initialize Gemini client
