@@ -12,20 +12,33 @@ from collections import Counter
 import uuid
 import hashlib
 from datetime import datetime
+import plotly.express as px
+import logging
+logging.basicConfig(level=logging.INFO)
+
+
+
 
 def get_api_key():
+    """Get API key from secrets or environment variables"""
+    # In production, use Streamlit secrets
     if 'GEMINI_API_KEY' in st.secrets:
         return st.secrets["GEMINI_API_KEY"]
+    # For local development or if set in environment
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
+        # Fallback to hardcoded key (not recommended for production)
         api_key = "AIzaSyAiRiy9CNUgu7CrorrSALFoi3016_MvmGM"
+        
     return api_key
 
 # Initialize Gemini client
 def init_gemini_client():
-    """Initialize Gemini client with API key"""
-    api_key = get_api_key()
-    return genai.Client(api_key=api_key)
+    """Initialize Gemini client with API key, only once per session"""
+    if 'gemini_client' not in st.session_state:
+        api_key = get_api_key()
+        st.session_state['gemini_client'] = genai.Client(api_key=api_key)
+    return st.session_state['gemini_client']
 # --- HELPER FUNCTIONS ---
 def init_session_state():
     """Initialize session state variables"""
@@ -108,7 +121,7 @@ Use the English field labels exactly as listed below, even if the resume is in M
     - Work Experience (string with details of work history)
     - Certifications (string with details of certifications)
     - Seniority Level (string: "Junior", "Mid-level", "Senior", "Lead", "Manager", or "Executive")
-    - Years of Experience (number, estimate from the resume)
+    - Years of Experience (float, estimate from the resume)
     - Primary Programming Languages (array of strings, if applicable)
     - Primary Industry (string, the main industry the candidate works in)
 
@@ -134,15 +147,16 @@ Use the English field labels exactly as listed below, even if the resume is in M
                 # Try to parse the JSON
                 parsed_json = json.loads(json_str)
                 return json_str
-            except json.JSONDecodeError:
-                # If parsing fails, try to clean the JSON string
+            except json.JSONDecodeError as e:
                 st.warning("Initial JSON parsing failed. Attempting to clean and retry...")
+                logging.exception(f"JSONDecodeError on initial parse: {e}")
                 cleaned_json = re.sub(r',\s*}', '}', json_str)  # Remove trailing commas
                 try:
                     json.loads(cleaned_json)
                     return cleaned_json
-                except json.JSONDecodeError:
-                    st.error("Failed to parse JSON even after cleaning")
+                except json.JSONDecodeError as e2:
+                    logging.exception(f"JSONDecodeError after cleaning: {e2}")
+                    st.error(f"Failed to parse JSON even after cleaning: {type(e2).__name__}: {e2}")
                     return None
         else:
             st.error("Could not extract JSON from the AI response")
@@ -306,6 +320,13 @@ def calculate_resume_score(resume):
     
     return score
 
+def normalize_years(years):
+    """Convert years of experience to float, or 0 if invalid."""
+    try:
+        return float(years)
+    except (ValueError, TypeError):
+        return 0.0
+
 # --- UI COMPONENTS ---
 def render_header():
     """Render the application header"""
@@ -399,6 +420,7 @@ def process_uploaded_files(files, client, overwrite=False):
                         parsed_info['id'] = generate_unique_id()
                         parsed_info['processed_date'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         parsed_info['score'] = calculate_resume_score(parsed_info)
+                        parsed_info['Years of Experience'] = normalize_years(parsed_info.get('Years of Experience', 0))
                         
                         # Remove existing entry if overwrite is enabled
                         if overwrite:
@@ -560,7 +582,7 @@ def render_candidate_card(resume):
     with header_col1:
         full_name = resume.get('Full Name', 'Unknown')
         seniority = resume.get('Seniority Level', 'Not Detected')
-        years_exp = resume.get('Years of Experience', '')
+        years_exp = normalize_years(resume.get('Years of Experience', 0)),
         exp_text = f", {years_exp} years" if years_exp else ""
         
         st.markdown(f"### 👤 {full_name} ({seniority}{exp_text})")
@@ -735,151 +757,92 @@ def render_candidate_card(resume):
                 st.experimental_rerun()
 
 def render_analytics_tab():
-    """Render the analytics tab UI"""
-    st.subheader("Resume Analytics")
+    """Render a practical, easy-to-understand analytics tab."""
+    st.subheader("📊 Resume Analytics Dashboard")
 
-    if not st.session_state.all_parsed_resumes:
+    resumes = st.session_state.all_parsed_resumes
+    if not resumes:
         st.info("No resumes uploaded yet. Please upload resumes from the Upload tab.")
         return
-    
-    # Extract data for analytics
-    all_skills = []
-    all_locations = []
-    all_seniority = []
-    all_industries = []
-    all_years_exp = []
-    
-    for resume in st.session_state.all_parsed_resumes:
-        # Process skills
-        skills = resume.get('Skills', [])
-        if isinstance(skills, list):
-            all_skills.extend(skills)
-        
-        # Process location
-        location = resume.get('Location', '')
-        if location:
-            all_locations.append(location)
-        
-        # Process seniority level
-        seniority = resume.get('Seniority Level', '')
-        if seniority:
-            all_seniority.append(seniority)
-        
-        # Process industry
-        industry = resume.get('Primary Industry', '')
-        if industry:
-            all_industries.append(industry)
-        
-        # Process years of experience
-        years = resume.get('Years of Experience', '')
-        if years:
-            try:
-                years = float(years)
-                all_years_exp.append(years)
-            except (ValueError, TypeError):
-                pass
-    
-    # Count frequencies
-    skill_counter = Counter([skill.strip().lower() for skill in all_skills if skill.strip()])
-    location_counter = Counter([loc.strip() for loc in all_locations if loc.strip()])
-    seniority_counter = Counter([level.strip() for level in all_seniority if level.strip()])
-    industry_counter = Counter([ind.strip() for ind in all_industries if ind.strip()])
-    
-    # Create layout with tabs for different analytics
-    tab1, tab2, tab3, tab4 = st.tabs(["Skills", "Demographics", "Experience", "Insights"])
-    
-    with tab1:
-        st.subheader("🏆 Top Skills")
-        if skill_counter:
-            # Show top skills chart
-            skill_df = pd.DataFrame(skill_counter.most_common(10), columns=["Skill", "Count"]).set_index("Skill")
-            st.bar_chart(skill_df)
-            
-            # Show skill word cloud (simulated)
-            st.markdown("### Skills Word Cloud")
-            # Create a simple HTML-based visualization for skills
-            html_skills = []
-            for skill, count in skill_counter.most_common(30):
-                size = 12 + min(count * 2, 30)  # Font size based on frequency
-                opacity = 0.5 + min(count / 10, 0.5)  # Opacity based on frequency
-                html_skills.append(f'<span style="font-size:{size}px; opacity:{opacity}; margin:5px">{skill}</span>')
-            
-            st.markdown('<div style="text-align:center">' + ' '.join(html_skills) + '</div>', unsafe_allow_html=True)
-        else:
-            st.info("No skills found yet.")
-    
-    with tab2:
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("📍 Candidate Locations")
-            if location_counter:
-                loc_df = pd.DataFrame(location_counter.most_common(10), columns=["Location", "Count"]).set_index("Location")
-                st.bar_chart(loc_df)
-            else:
-                st.info("No locations found yet.")
-        
-        with col2:
-            st.subheader("🏢 Industries")
-            if industry_counter:
-                ind_df = pd.DataFrame(industry_counter.most_common(10), columns=["Industry", "Count"]).set_index("Industry")
-                st.bar_chart(ind_df)
-            else:
-                st.info("No industries found yet.")
-    
-    with tab3:
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("👔 Seniority Levels")
-            if seniority_counter:
-                sen_df = pd.DataFrame(seniority_counter.most_common(), columns=["Level", "Count"]).set_index("Level")
-                st.bar_chart(sen_df)
-            else:
-                st.info("No seniority levels found yet.")
-        
-        with col2:
-            st.subheader("⏱️ Years of Experience")
-            if all_years_exp:
-                # Create bins for years of experience
-                bins = [0, 1, 3, 5, 7, 10, float('inf')]
-                labels = ['< 1 year', '1-3 years', '3-5 years', '5-7 years', '7-10 years', '10+ years']
-                exp_categories = pd.cut(all_years_exp, bins=bins, labels=labels)
-                exp_counter = Counter(exp_categories)
-                
-                exp_df = pd.DataFrame({
-                    'Experience Range': list(exp_counter.keys()),
-                    'Count': list(exp_counter.values())
-                }).set_index('Experience Range')
-                
-                st.bar_chart(exp_df)
-            else:
-                st.info("No experience data found yet.")
-    
-    with tab4:
-        st.subheader("💡 AI-Generated Insights")
-        
-        if len(st.session_state.all_parsed_resumes) >= 5:
-            with st.spinner("Generating insights from your candidate pool..."):
-                insights = [
-                    "Your candidate pool is strongest in technical skills, with programming languages being the most common skillset.",
-                    f"The average candidate has {sum(all_years_exp)/len(all_years_exp):.1f} years of experience.",
-                    f"Most candidates ({seniority_counter.most_common(1)[0][0]}) are at the {seniority_counter.most_common(1)[0][0]} level.",
-                    "Consider diversifying your candidate search to include more frontend developers, as this appears to be underrepresented.",
-                    "Many candidates have overlapping skill sets in data science and machine learning."
-                ]
-                
-                for insight in insights:
-                    st.markdown(f"• {insight}")
-                    
-                st.markdown("### Skills Gap Analysis")
-                st.markdown("Based on your candidate pool, you may want to look for candidates with these skills:")
-                
-                missing_skills = ["DevOps", "Cloud Architecture", "UI/UX Design", "Mobile Development", "Project Management"]
-                for skill in missing_skills:
-                    st.markdown(f"• {skill}")
-        else:
-            st.info("Upload at least 5 resumes to generate AI insights about your candidate pool.")
+
+    # Extract data
+    skills = []
+    locations = []
+    seniorities = []
+    industries = []
+    years_exp = []
+    processed_dates = []
+
+    for r in resumes:
+        skills.extend(r.get('Skills', []))
+        if r.get('Location'): locations.append(r['Location'])
+        if r.get('Seniority Level'): seniorities.append(r['Seniority Level'])
+        if r.get('Primary Industry'): industries.append(r['Primary Industry'])
+        try:
+            years_exp.append(float(r.get('Years of Experience', 0)))
+        except Exception:
+            pass
+        if r.get('processed_date'): processed_dates.append(r['processed_date'][:10])
+
+    # Summary stats
+    skill_counter = Counter([s.strip().lower() for s in skills if s.strip()])
+    location_counter = Counter([l.strip() for l in locations if l.strip()])
+    seniority_counter = Counter([s.strip() for s in seniorities if s.strip()])
+    industry_counter = Counter([i.strip() for i in industries if i.strip()])
+    date_counter = Counter(processed_dates)
+
+    top_skill = skill_counter.most_common(1)[0][0].title() if skill_counter else "N/A"
+    top_location = location_counter.most_common(1)[0][0] if location_counter else "N/A"
+    avg_exp = sum(years_exp)/len(years_exp) if years_exp else 0
+
+    st.markdown("#### 📋 Summary")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Top Skill", top_skill)
+    col2.metric("Top Location", top_location)
+    col3.metric("Avg Experience", f"{avg_exp:.1f} yrs")
+
+    st.divider()
+
+    # Top Skills
+    st.markdown("### 🏆 Top 10 Skills")
+    if skill_counter:
+        skill_df = pd.DataFrame(skill_counter.most_common(10), columns=["Skill", "Count"])
+        st.bar_chart(skill_df.set_index("Skill"))
+    else:
+        st.info("No skill data available.")
+
+    # Seniority Level Distribution
+    st.markdown("### 🏅 Seniority Level Distribution")
+    if seniority_counter:
+        sen_df = pd.DataFrame(seniority_counter.most_common(), columns=["Seniority", "Count"])
+        st.bar_chart(sen_df.set_index("Seniority"))
+    else:
+        st.info("No seniority data available.")
+
+    # Location Distribution
+    st.markdown("### 🌍 Top 10 Locations")
+    if location_counter:
+        loc_df = pd.DataFrame(location_counter.most_common(10), columns=["Location", "Count"])
+        st.bar_chart(loc_df.set_index("Location"))
+    else:
+        st.info("No location data available.")
+
+
+    # Industry Distribution
+    st.markdown("### 🏭 Top 10 Industries")
+    if industry_counter:
+        ind_df = pd.DataFrame(industry_counter.most_common(10), columns=["Industry", "Count"])
+        st.bar_chart(ind_df.set_index("Industry"))
+    else:
+        st.info("No industry data available.")
+
+    # Candidate Count Over Time (optional)
+    if date_counter and len(date_counter) > 1:
+        st.markdown("### 📈 Candidates Processed Over Time")
+        date_df = pd.DataFrame(sorted(date_counter.items()), columns=["Date", "Count"])
+        st.line_chart(date_df.set_index("Date"))
+
+
 
 # --- MAIN APP ---
 def main():
