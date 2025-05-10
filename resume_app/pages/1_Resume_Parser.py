@@ -25,11 +25,11 @@ model = genai.GenerativeModel("gemini-2.0-flash")
 
 # Initialize Gemini client
 def init_gemini_client():
-    """Initialize Gemini client with API key, only once per session"""
-    if 'gemini_client' not in st.session_state:
-        api_key = get_api_key()
-        st.session_state['gemini_client'] = genai.Client(api_key=api_key)
-    return st.session_state['gemini_client']
+    """Initialize Gemini model once per session."""
+    if 'gemini_model' not in st.session_state:
+        genai.configure(api_key=api_key)
+        st.session_state['gemini_model'] = genai.GenerativeModel("gemini-2.0-flash")
+    return st.session_state['gemini_model']
 # --- HELPER FUNCTIONS ---
 def init_session_state():
     """Initialize session state variables"""
@@ -374,7 +374,7 @@ def render_upload_tab():
             st.session_state.all_parsed_resumes = []
             st.experimental_rerun()
 
-def process_uploaded_files(files, client, overwrite=False):
+def process_uploaded_files(uploaded_files, init_gemini_client(), overwrite):
     """Process uploaded resume files"""
     try:
         st.session_state.processing = True
