@@ -387,9 +387,9 @@ def process_uploaded_files(uploaded_files, client, overwrite):
         skipped_count = 0
         
         for i, uploaded_file in enumerate(uploaded_files):
-            progress = (i + 1) / len(files)
+            progress = (i + 1) / len(uploaded_files)
             progress_bar.progress(progress)
-            status_text.text(f"Processing file {i+1} of {len(files)}: {uploaded_file.name}")
+            status_text.text(f"Processing file {i+1} of {len(uploaded_files)}: {uploaded_file.name}")
             
             # Check if file already exists and overwrite is not enabled
             if not overwrite and uploaded_file.name in existing_filenames:
