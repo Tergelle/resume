@@ -18,18 +18,10 @@ logging.basicConfig(level=logging.INFO)
 
 
 
-def get_api_key():
-    """Get API key from secrets or environment variables"""
-    # In production, use Streamlit secrets
-    if 'GEMINI_API_KEY' in st.secrets:
-        return st.secrets["GEMINI_API_KEY"]
-    # For local development or if set in environment
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        # Fallback to hardcoded key (not recommended for production)
-        api_key = "AIzaSyAiRiy9CNUgu7CrorrSALFoi3016_MvmGM"
-        
-    return api_key
+api_key = "AIzaSyAiRiy9CNUgu7CrorrSALFoi3016_MvmGM"
+genai.configure(api_key=api_key)
+model = genai.GenerativeModel("gemini-2.0-flash")
+
 
 # Initialize Gemini client
 def init_gemini_client():
@@ -101,7 +93,7 @@ def safe_generate_content(client, prompt, retries=3, delay=2):
             st.error(f"Error calling Gemini API: {e}")
             return None
 
-def parse_resume_with_gemini(text, client):
+def parse_resume_with_gemini(text, model):
     """Parse resume text using Gemini AI"""
     prompt = f"""
     You are an expert multilingual HR assistant. The following resume text may be in English or Mongolian. Please automatically detect the language and extract the information into **only valid JSON**. No explanations, no extra text, only JSON starting with {{ and ending with }}. 
@@ -132,7 +124,7 @@ Use the English field labels exactly as listed below, even if the resume is in M
     """
     
     with st.spinner("Analyzing resume with AI..."):
-        response = safe_generate_content(client, prompt)
+        response = model.generate_content(contents=prompt)
         if not response:
             return None
 
