@@ -1,7 +1,6 @@
 import streamlit as st
 import pdfplumber
 import docx
-from google import genai
 import os
 import json
 import re
