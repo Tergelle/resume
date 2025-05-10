@@ -6,7 +6,7 @@ import os
 import json
 import re
 import time
-from google.genai import errors
+import google.generativeai as genai
 import pandas as pd
 from collections import Counter
 import uuid
