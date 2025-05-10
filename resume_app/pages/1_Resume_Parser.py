@@ -374,7 +374,7 @@ def render_upload_tab():
             st.session_state.all_parsed_resumes = []
             st.experimental_rerun()
 
-def process_uploaded_files(uploaded_files, init_gemini_client(), overwrite):
+def process_uploaded_files(uploaded_files, client, overwrite):
     """Process uploaded resume files"""
     try:
         st.session_state.processing = True
