@@ -2,7 +2,7 @@ import streamlit as st
 
 st.set_page_config(page_title="ATS AI", layout="centered")
 
-# --- Consistent CSS, wider card ---
+# --- CSS ---
 st.markdown("""
     <style>
     .stApp {
