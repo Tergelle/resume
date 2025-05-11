@@ -2,27 +2,33 @@ import streamlit as st
 
 st.set_page_config(page_title="ATS AI", layout="centered")
 
-# --- Consistent CSS ---
+# --- Consistent CSS, wider card ---
 st.markdown("""
     <style>
-    .stApp { background-color: #f7fafd; }
+    .stApp {
+        background-color: #f7fafd;
+    }
     .welcome-card {
         background: #fff;
         border-radius: 18px;
         box-shadow: 0 2px 12px #e0e7ef;
         padding: 2.5rem 2.5rem 2rem 2.5rem;
         margin: 3rem auto 2rem auto;
-        max-width: 500px;
+        max-width: 800px;
+        min-width: 400px;
         text-align: center;
     }
     .feature-list {
         text-align: left;
         margin: 1.5rem auto 0 auto;
-        max-width: 350px;
-        font-size: 1.1rem;
+        max-width: 600px;
+        font-size: 1.18rem;
     }
     .feature-list li {
-        margin-bottom: 0.7rem;
+        margin-bottom: 0.9rem;
+    }
+    .welcome-card h1 {
+        font-size: 2.5rem;
     }
     .cta-btn {
         background-color: #2563eb;
@@ -59,6 +65,8 @@ st.markdown("""
         <li>🧠 <b>AI-Powered Skill Extraction</b> — Extract skills from any job description</li>
         <li>📊 <b>Analytics Dashboard</b> — Visualize your talent pool</li>
     </ul>
-    <button class="cta-btn" onclick="window.location.href='/pages/1_Resume_Parser.py'">🚀 Get Started</button>
 </div>
 """, unsafe_allow_html=True)
+
+# Navigation button (not inside HTML)
+st.page_link("pages/1_Resume_Parser.py", label="🚀 Get Started")
