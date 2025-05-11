@@ -59,6 +59,6 @@ st.markdown("""
         <li>🧠 <b>AI-Powered Skill Extraction</b> — Extract skills from any job description</li>
         <li>📊 <b>Analytics Dashboard</b> — Visualize your talent pool</li>
     </ul>
-    <a href="/Resume_Parser" class="cta-btn">🚀 Get Started</a>
+    <button class="cta-btn" onclick="window.location.href='/pages/1_Resume_Parser.py'">🚀 Get Started</button>
 </div>
 """, unsafe_allow_html=True)
