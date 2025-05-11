@@ -331,6 +331,88 @@ def render_header():
         st.title("👩‍💼 Smart HR Resume Assistant")
         st.caption("Powered by Gemini AI")
 
+    st.markdown("""
+        <style>
+        .stApp {
+            background-color: #f7fafd;
+        }
+        .stButton>button, .stDownloadButton>button {
+            background-color: #2563eb;
+            color: white;
+            border-radius: 8px;
+            padding: 0.4rem 1.2rem;
+            font-weight: 500;
+            font-size: 1rem;
+            height: 40px;
+            min-width: 120px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            white-space: nowrap;
+            border: none;
+            margin-bottom: 8px;
+        }
+        .stButton>button:hover, .stDownloadButton>button:hover {
+            background-color: #1e40af;
+            cursor: pointer;
+        }
+        .custom-action-btn:last-child {
+            margin-right: 0;
+        }
+        .stTabs [data-baseweb="tab"] {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2563eb;
+        }
+        .stMetric {
+            background: #e0e7ef;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        .stExpanderHeader {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #2563eb;
+        }
+        .st-cb, .stTextInput>div>input, .stTextArea>div>textarea {
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: #f1f5f9;
+        }
+        .stMarkdown h3, .stMarkdown h4, .stMarkdown h5 {
+            color: #1e293b;
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+        }
+        .stMarkdown {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            color: #334155;
+        }
+        .custom-action-btn {
+            min-width: 100px;
+            max-width: 120px;
+            height: 40px;
+            margin-right: 12px;
+            margin-bottom: 8px;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: 500;
+            border-radius: 8px;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            transition: background 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
 def render_upload_tab():
     """Render the upload tab UI"""
     st.subheader("Upload Resumes")
@@ -372,7 +454,7 @@ def render_upload_tab():
         # Allow clearing all resumes
         if st.button("❌ Clear All Resumes"):
             st.session_state.all_parsed_resumes = []
-            st.experimental_rerun()
+            st.rerun()
 
 def process_uploaded_files(uploaded_files, client, overwrite):
     """Process uploaded resume files"""
@@ -546,13 +628,13 @@ def render_view_tab():
         with col1:
             if st.button("◀️ Previous", disabled=st.session_state.current_page == 0):
                 st.session_state.current_page = max(0, st.session_state.current_page - 1)
-                st.experimental_rerun()
+                st.rerun()
         with col2:
             st.markdown(f"### Page {st.session_state.current_page + 1} of {total_pages}")
         with col3:
             if st.button("Next ▶️", disabled=st.session_state.current_page >= total_pages - 1):
                 st.session_state.current_page = min(total_pages - 1, st.session_state.current_page + 1)
-                st.experimental_rerun()
+                st.rerun()
     
     # Get current page items
     current_items = paginate(display_resumes, st.session_state.current_page, items_per_page)
@@ -564,23 +646,62 @@ def render_view_tab():
 def render_candidate_card(resume):
     """Render a candidate card for resume details"""
     unique_id = resume.get('id', '').replace('-', '_')
-    
-    # Calculate match score if this is from search results
     match_score = resume.get('score', 0)
-    
-    # Card header with name and match score
-    header_col1, header_col2 = st.columns([3, 1])
-    with header_col1:
-        full_name = resume.get('Full Name', 'Unknown')
-        seniority = resume.get('Seniority Level', 'Not Detected')
-        years_exp = normalize_years(resume.get('Years of Experience', 0)),
-        exp_text = f", {years_exp} years" if years_exp else ""
-        
-        st.markdown(f"### 👤 {full_name} ({seniority}{exp_text})")
-    with header_col2:
-        st.markdown(f"**Match Score: {match_score}/100**")
-    
-    # Main card content
+
+    # Card container with custom style
+    with st.container():
+        st.markdown(
+            f"""
+            <div style='background: #fff; border-radius: 16px; box-shadow: 0 2px 8px #e0e7ef; padding: 1.2rem 1.5rem 1.2rem 1.5rem; margin-bottom: 1.2rem;'>
+            <div style='display: flex; align-items: center;'>
+                <div style='flex-shrink:0; width:48px; height:48px; border-radius:50%; background:#e6f3ff; display:flex; align-items:center; justify-content:center; font-size:2rem; color:#2563eb; margin-right:1rem;'>
+                    {resume.get('Full Name', 'U')[0].upper() if resume.get('Full Name') else 'U'}
+                </div>
+                <div style='flex-grow:1;'>
+                    <span style='font-size:1.5rem; font-weight:700; color:#1e293b;'>👤 {resume.get('Full Name', 'Unknown')}</span>
+                    <span style='font-size:1.1rem; color:#64748b; font-weight:500;'> ({resume.get('Seniority Level', 'Not Detected')}, {normalize_years(resume.get('Years of Experience', 0)):.1f} years)</span>
+                </div>
+                <div style='flex-shrink:0; text-align:right;'>
+                    <span style='font-size:1.1rem; font-weight:600; color:#2563eb;'>Match Score: {match_score}/100</span>
+                </div>
+            </div>
+            <div style='margin-top:0.5rem;'>
+        """,
+            unsafe_allow_html=True
+        )
+        # Top 5 skills as tags
+        top_skills = resume.get('Skills', [])[:5]
+        if top_skills:
+            html_skills = []
+            for skill in top_skills:
+                html_skills.append(f"<span style='background-color:#e6f3ff; color:#2563eb; padding:3px 10px; border-radius:12px; margin:2px; display:inline-block; font-size:0.95rem; font-weight:500'>{skill}</span>")
+            st.markdown(' '.join(html_skills), unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # Action buttons row using columns for even spacing
+        col1, col2, col3, col4 = st.columns(4)
+        json_data = json.dumps(resume, indent=4)
+        with col1:
+            st.download_button(
+                label="💾 Download JSON",
+                data=json_data,
+                file_name=f"{resume.get('Full Name', 'resume').replace(' ', '_')}.json",
+                mime="application/json",
+                key=f"download_{unique_id}"
+            )
+        with col2:
+            if st.button("✏️ Edit", key=f"edit_{unique_id}_card"):
+                st.session_state[f"edit_mode_{unique_id}"] = True
+        with col3:
+            if st.button("🗑️ Delete", key=f"delete_{unique_id}"):
+                st.session_state.all_parsed_resumes = [r for r in st.session_state.all_parsed_resumes if r.get('id') != resume.get('id')]
+                st.success("Candidate deleted.")
+                st.rerun()
+        with col4:
+            if st.button("🔍 Similar", key=f"similar_{unique_id}_card"):
+                st.session_state[f"show_similar_{unique_id}"] = True
+
+    # Main card content (expander, edit, similar, etc.)
     with st.expander("View Details", expanded=False):
         # Basic information section
         st.markdown("#### 📋 Basic Information")
@@ -632,25 +753,6 @@ def render_candidate_card(resume):
         
         with tab3:
             st.markdown(resume.get('Certifications', 'No certifications detected'))
-        
-        # Action buttons
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("💾 Download JSON", key=f"json_{unique_id}"):
-                json_data = json.dumps(resume, indent=4)
-                st.download_button(
-                    label="Save JSON File",
-                    data=json_data,
-                    file_name=f"{resume.get('Full Name', 'resume').replace(' ', '_')}.json",
-                    mime="application/json",
-                    key=f"download_{unique_id}"
-                )
-        with col2:
-            if st.button("✏️ Edit Resume", key=f"edit_{unique_id}"):
-                st.session_state[f"edit_mode_{unique_id}"] = True
-        with col3:
-            if st.button("🔍 Find Similar Candidates", key=f"similar_{unique_id}"):
-                st.session_state[f"show_similar_{unique_id}"] = True
         
         # Edit mode
         if st.session_state.get(f"edit_mode_{unique_id}", False):
@@ -707,14 +809,14 @@ def render_candidate_card(resume):
                         
                         st.success("Changes saved successfully!")
                         st.session_state[f"edit_mode_{unique_id}"] = False
-                        st.experimental_rerun()
+                        st.rerun()
                     except Exception as e:
                         st.error(f"Error saving changes: {e}")
             
             with col2:
                 if st.button("❌ Cancel", key=f"cancel_{unique_id}"):
                     st.session_state[f"edit_mode_{unique_id}"] = False
-                    st.experimental_rerun()
+                    st.rerun()
         
         # Similar candidates view
         if st.session_state.get(f"show_similar_{unique_id}", False):
@@ -739,13 +841,13 @@ def render_candidate_card(resume):
                     if st.button("View Profile", key=f"view_{similar_resume.get('id', '')}"):
                         # This would ideally navigate to that resume, but for now just toggle state
                         st.session_state[f"show_similar_{unique_id}"] = False
-                        st.experimental_rerun()
+                        st.rerun()
             else:
                 st.info("No similar candidates found")
             
             if st.button("Close", key=f"close_similar_{unique_id}"):
                 st.session_state[f"show_similar_{unique_id}"] = False
-                st.experimental_rerun()
+                st.rerun()
 
 def render_analytics_tab():
     """Render a practical, easy-to-understand analytics tab."""
@@ -845,7 +947,7 @@ def main():
     render_header()
     
     # Create tabs
-    tab1, tab2, tab3 = st.tabs(["📥 Upload & Parse", "👥 View & Search Candidates", "📊 Resume Analytics"])
+    tab1, tab2, tab3 = st.tabs(["👥 Upload & Parse", "👥 View & Search Candidates", "📊 Resume Analytics"])
     
     with tab1:
         render_upload_tab()
