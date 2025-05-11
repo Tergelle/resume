@@ -4,7 +4,7 @@ import re
 import os
 import google.generativeai as genai
 
-# --- Consistent CSS with Resume Parser ---
+# --- CSS  ---
 st.markdown("""
     <style>
     .stApp {
