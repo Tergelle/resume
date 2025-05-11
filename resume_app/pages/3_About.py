@@ -2,7 +2,7 @@ import streamlit as st
 
 st.set_page_config(page_title="About", layout="centered")
 
-# --- Consistent CSS, card style ---
+# --- CSS, card style ---
 st.markdown("""
     <style>
     .stApp { background-color: #f7fafd; }
