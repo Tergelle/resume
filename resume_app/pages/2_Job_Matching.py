@@ -4,7 +4,7 @@ import re
 import os
 import google.generativeai as genai
 
-# --- CSS  ---
+# --- Consistent CSS with Resume Parser ---
 st.markdown("""
     <style>
     .stApp {
@@ -137,17 +137,18 @@ def render_job_matching_page():
         results.sort(key=lambda x: x[1], reverse=True)
         st.markdown("### Candidate Matches")
         for resume, score, overlap in results:
-            st.markdown(
-                f"""
-                <div class='job-matching-container'>
-                    <span style='font-size:1.2rem; font-weight:700;'>{resume.get('Full Name', 'Unknown')}</span>
-                    <span class='match-score'>Match: {score*100:.0f}%</span>
-                    <div style='margin-top:0.5rem;'>
-                        {render_skill_tags(overlap)}
+            if score > 0:
+                st.markdown(
+                    f"""
+                    <div class='job-matching-container'>
+                        <span style='font-size:1.2rem; font-weight:700;'>{resume.get('Full Name', 'Unknown')}</span>
+                        <span class='match-score'>Match: {score*100:.0f}%</span>
+                        <div style='margin-top:0.5rem;'>
+                            {render_skill_tags(overlap)}
+                        </div>
                     </div>
-                </div>
-                """, unsafe_allow_html=True
-            )
+                    """, unsafe_allow_html=True
+                )
 
 if __name__ == "__main__" or True:
     render_job_matching_page()
