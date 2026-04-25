@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 # GENAI_API_KEY
-api_key = "AIzaSyAiRiy9CNUgu7CrorrSALFoi3016_MvmGM"
+api_key = "AIzaSyBtwcWoEHLmevzS-RIIj1Q3KHzssOb7zC8"
 genai.configure(api_key=api_key)
 model = genai.GenerativeModel("gemini-2.0-flash")
 
